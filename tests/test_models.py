@@ -25,6 +25,11 @@ def test_run_result_keeps_typed_stage_results():
     request = RunRequest(run_id="run-001", command="screen")
     stage = StageResult(stage="screening", status=StageStatus.SUCCEEDED)
 
-    result = RunResult(request=request, stages=[stage])
+    result = RunResult(
+        request=request,
+        status=StageStatus.SUCCEEDED,
+        stages=[stage],
+    )
 
+    assert result.status is StageStatus.SUCCEEDED
     assert result.stages == [stage]

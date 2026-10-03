@@ -24,4 +24,5 @@ class StageResult(BaseModel):
 
 class RunResult(BaseModel):
     request: RunRequest
+    status: StageStatus
     stages: list[StageResult] = Field(default_factory=list)
