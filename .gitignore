@@ -1,5 +1,7 @@
 .env
 .venv/
+.archify/
+.DS_Store
 __pycache__/
 .pytest_cache/
 *.py[cod]
