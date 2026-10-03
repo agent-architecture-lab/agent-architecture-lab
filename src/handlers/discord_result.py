@@ -40,7 +40,10 @@ def _send_json(url: str, body: dict[str, Any]) -> None:
     request = Request(
         url,
         data=json.dumps(body).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "community-ops/0.1 (https://github.com/agent-architecture-lab/agent-architecture-lab)",
+        },
         method="PATCH",
     )
     with urlopen(request, timeout=5):
