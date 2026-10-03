@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "community-ops"
+version = "0.1.0"
+description = "Deterministic community operations agent"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2,<3"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
