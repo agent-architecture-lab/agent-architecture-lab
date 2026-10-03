@@ -1,0 +1,308 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Community operations dev workflow — uses Lambda and Standard Step Functions for a fixed, auditable route.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    arch: Discord ingress -> Lambda -> Standard Step Functions -> stage Lambdas -> result Lambda
+    must:
+      - dev only; no database, VPC, container, or production resource
+      - workflow state contains no secret or personal data
+    ref:
+      - docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev]
+    Description: Deployment environment. This stack supports dev only.
+  OpenAISecretArn:
+    Type: String
+    Description: ARN of the Secrets Manager secret holding the OpenAI API key.
+  DiscordApplicationId:
+    Type: String
+    Description: Discord application ID used for result delivery.
+  DiscordPublicKey:
+    Type: String
+    Description: Discord interaction public key used to verify incoming requests.
+  BudgetAlertEmail:
+    Type: String
+    NoEcho: true
+    Description: Email address for 5, 8, and 10 USD monthly budget alerts.
+
+Resources:
+  DiscordApi:
+    Type: AWS::Serverless::HttpApi
+
+  DiscordIngressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.discord_ingress.lambda_handler
+      Runtime: python3.12
+      Timeout: 3
+      Environment:
+        Variables:
+          DISCORD_PUBLIC_KEY: !Ref DiscordPublicKey
+          STATE_MACHINE_ARN: !Ref CommunityWorkflow
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action: states:StartExecution
+            Resource: !Ref CommunityWorkflow
+      Events:
+        Interactions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DiscordApi
+            Path: /discord/interactions
+            Method: POST
+
+  DiscordResultFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.discord_result.lambda_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          DISCORD_APPLICATION_ID: !Ref DiscordApplicationId
+
+  ScreeningFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.screening_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  MatchingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.matching_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  FaqFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.faq_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          OPENAI_SECRET_ARN: !Ref OpenAISecretArn
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref OpenAISecretArn
+
+  ReflectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.reflection_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  ScreeningLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ScreeningFunction}"
+      RetentionInDays: 7
+
+  MatchingLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${MatchingFunction}"
+      RetentionInDays: 7
+
+  FaqLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${FaqFunction}"
+      RetentionInDays: 7
+
+  ReflectionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ReflectionFunction}"
+      RetentionInDays: 7
+
+  DiscordIngressLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DiscordIngressFunction}"
+      RetentionInDays: 7
+
+  DiscordResultLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DiscordResultFunction}"
+      RetentionInDays: 7
+
+  StateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/vendedlogs/states/${AWS::StackName}-community"
+      RetentionInDays: 7
+
+  DevMonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub "${AWS::StackName}-monthly"
+        BudgetLimit:
+          Amount: "10"
+          Unit: USD
+        BudgetType: COST
+        TimeUnit: MONTHLY
+      NotificationsWithSubscribers:
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: 5
+            ThresholdType: ABSOLUTE_VALUE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetAlertEmail
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: 8
+            ThresholdType: ABSOLUTE_VALUE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetAlertEmail
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: 10
+            ThresholdType: ABSOLUTE_VALUE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetAlertEmail
+
+  CommunityWorkflow:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: STANDARD
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StateMachineLogGroup.Arn
+        IncludeExecutionData: false
+        Level: ERROR
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              - !GetAtt ScreeningFunction.Arn
+              - !GetAtt MatchingFunction.Arn
+              - !GetAtt FaqFunction.Arn
+              - !GetAtt ReflectionFunction.Arn
+              - !GetAtt DiscordResultFunction.Arn
+      Definition:
+        StartAt: Screening
+        States:
+          Screening:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt ScreeningFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.screening"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: ScreeningStatus
+          ScreeningStatus:
+            Type: Choice
+            Choices:
+              - Variable: "$.screening.Payload.status"
+                StringEquals: failed
+                Next: ResultDelivery
+            Default: Matching
+          Matching:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt MatchingFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.matching"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: MatchingStatus
+          MatchingStatus:
+            Type: Choice
+            Choices:
+              - Variable: "$.matching.Payload.status"
+                StringEquals: failed
+                Next: ResultDelivery
+            Default: FAQ
+          FAQ:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt FaqFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.faq"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: FAQStatus
+          FAQStatus:
+            Type: Choice
+            Choices:
+              - Variable: "$.faq.Payload.status"
+                StringEquals: failed
+                Next: ResultDelivery
+            Default: Reflection
+          Reflection:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt ReflectionFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.reflection"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: ResultDelivery
+          ResultDelivery:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt DiscordResultFunction.Arn
+              Payload.$: "$"
+            End: true
+
+Outputs:
+  StateMachineArn:
+    Description: ARN of the dev-only community workflow.
+    Value: !Ref CommunityWorkflow
+  DiscordInteractionEndpoint:
+    Description: Set this URL as the Discord interaction endpoint.
+    Value: !Sub "https://${DiscordApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/discord/interactions"
