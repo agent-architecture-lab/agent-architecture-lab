@@ -24,8 +24,8 @@ related: [docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md
 
 - [x] Task 1-6 구현 완료: typed contracts, 결정형 stages, fail-closed FAQ, 1회 reflection, 측정 workflow, SAM stage adapters.
 - [x] 로컬 검증: `uv run --with pytest pytest -q` 21개 통과, `sam validate --lint --template-file infra/template.yaml` 통과, `sam build --template-file infra/template.yaml` 통과.
-- [ ] Task 6 커밋 `6722161`을 `origin/codex/task-1-typed-contracts`에 push한다. 계획 작성 직전 실측에서 이 브랜치는 원격보다 1커밋 앞서고 작업 트리는 clean이었다.
-- [ ] Task 7: Discord ingress와 안전한 결과 전송을 구현한다.
+- [x] Task 6 커밋 `6722161`을 `origin/codex/task-1-typed-contracts`에 push했다.
+- [x] Task 7: Discord ingress와 안전한 결과 전송을 구현했다.
 - [ ] Task 8: PR CI, 비용 알림, dev 배포 runbook을 추가한다.
 
 `cfn-guard`는 현재 설치되어 있지 않아 정책 검증은 아직 실행하지 않았다. AWS 리소스와 배포는 0건이다.

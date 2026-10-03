@@ -23,11 +23,52 @@ Parameters:
   OpenAISecretArn:
     Type: String
     Description: ARN of the Secrets Manager secret holding the OpenAI API key.
-  ResultHandlerArn:
+  DiscordApplicationId:
     Type: String
-    Description: ARN of the Discord result Lambda added in Task 7.
+    Description: Discord application ID used for result delivery.
+  DiscordPublicKey:
+    Type: String
+    Description: Discord interaction public key used to verify incoming requests.
 
 Resources:
+  DiscordApi:
+    Type: AWS::Serverless::HttpApi
+
+  DiscordIngressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.discord_ingress.lambda_handler
+      Runtime: python3.12
+      Timeout: 3
+      Environment:
+        Variables:
+          DISCORD_PUBLIC_KEY: !Ref DiscordPublicKey
+          STATE_MACHINE_ARN: !Ref CommunityWorkflow
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action: states:StartExecution
+            Resource: !Ref CommunityWorkflow
+      Events:
+        Interactions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DiscordApi
+            Path: /discord/interactions
+            Method: POST
+
+  DiscordResultFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.discord_result.lambda_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          DISCORD_APPLICATION_ID: !Ref DiscordApplicationId
+
   ScreeningFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -100,6 +141,18 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${ReflectionFunction}"
       RetentionInDays: 7
 
+  DiscordIngressLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DiscordIngressFunction}"
+      RetentionInDays: 7
+
+  DiscordResultLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DiscordResultFunction}"
+      RetentionInDays: 7
+
   StateMachineLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -125,7 +178,7 @@ Resources:
               - !GetAtt MatchingFunction.Arn
               - !GetAtt FaqFunction.Arn
               - !GetAtt ReflectionFunction.Arn
-              - !Ref ResultHandlerArn
+              - !GetAtt DiscordResultFunction.Arn
       Definition:
         StartAt: Screening
         States:
@@ -202,7 +255,7 @@ Resources:
             Type: Task
             Resource: arn:aws:states:::lambda:invoke
             Parameters:
-              FunctionName: !Ref ResultHandlerArn
+              FunctionName: !GetAtt DiscordResultFunction.Arn
               Payload.$: "$"
             End: true
 
@@ -210,3 +263,6 @@ Outputs:
   StateMachineArn:
     Description: ARN of the dev-only community workflow.
     Value: !Ref CommunityWorkflow
+  DiscordInteractionEndpoint:
+    Description: Set this URL as the Discord interaction endpoint.
+    Value: !Sub "https://${DiscordApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/discord/interactions"
