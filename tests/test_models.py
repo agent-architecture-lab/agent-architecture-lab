@@ -10,7 +10,9 @@ def test_stage_result_rejects_unknown_status():
         StageResult(stage="screening", status="maybe")
 
 
-def test_local_settings_do_not_require_openai_key():
+def test_local_settings_do_not_require_openai_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
     assert Settings.from_env().openai_api_key is None
 
 
