@@ -9,6 +9,9 @@ description = "Deterministic community operations agent"
 requires-python = ">=3.12"
 dependencies = ["openai>=1,<2", "pydantic>=2,<3", "pynacl>=1.5,<2"]
 
+[dependency-groups]
+dev = ["pytest>=8,<9"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
