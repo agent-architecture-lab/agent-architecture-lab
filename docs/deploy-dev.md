@@ -18,7 +18,7 @@ related: [docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md
 4. Deploy only the dev stack:
 
 ```bash
-sam deploy --region us-east-1 --template-file infra/template.yaml --stack-name community-ops-dev --capabilities CAPABILITY_IAM --parameter-overrides Environment=dev OpenAISecretArn=SECRET_ARN DiscordApplicationId=APPLICATION_ID DiscordPublicKey=PUBLIC_KEY BudgetAlertEmail=ALERT_EMAIL
+sam deploy --region ap-northeast-2 --template-file infra/template.yaml --stack-name community-ops-dev --capabilities CAPABILITY_IAM --parameter-overrides Environment=dev OpenAISecretArn=SECRET_ARN DiscordApplicationId=APPLICATION_ID DiscordPublicKey=PUBLIC_KEY BudgetAlertEmail=ALERT_EMAIL
 ```
 
 5. Copy the `DiscordInteractionEndpoint` output into the Discord application interaction endpoint setting.
