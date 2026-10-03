@@ -20,6 +20,24 @@ related: [docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md
 
 **Spec:** `docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md`
 
+## 현재 상태
+
+- [x] Task 1-6 구현 완료: typed contracts, 결정형 stages, fail-closed FAQ, 1회 reflection, 측정 workflow, SAM stage adapters.
+- [x] 로컬 검증: `uv run --with pytest pytest -q` 21개 통과, `sam validate --lint --template-file infra/template.yaml` 통과, `sam build --template-file infra/template.yaml` 통과.
+- [ ] Task 6 커밋 `6722161`을 `origin/codex/task-1-typed-contracts`에 push한다. 계획 작성 직전 실측에서 이 브랜치는 원격보다 1커밋 앞서고 작업 트리는 clean이었다.
+- [ ] Task 7: Discord ingress와 안전한 결과 전송을 구현한다.
+- [ ] Task 8: PR CI, 비용 알림, dev 배포 runbook을 추가한다.
+
+`cfn-guard`는 현재 설치되어 있지 않아 정책 검증은 아직 실행하지 않았다. AWS 리소스와 배포는 0건이다.
+
+## 이번 세션 실행 계획
+
+1. Task 6를 push한 뒤 원격 SHA와 clean working tree를 확인한다.
+2. Task 7 테스트부터 추가한다. 잘못된 서명은 `401`이고 Step Functions를 시작하지 않으며, 유효한 명령은 3초 안에 deferred response `{"type": 5}`를 반환하는지 검증한다.
+3. Discord public key 검증, `StartExecution`, interaction token의 최소 workflow state 전달, `allowed_mentions: {"parse": []}`인 성공 또는 실패 follow-up을 구현한다.
+4. SAM에 ingress API와 두 Lambda를 실제 리소스로 연결하고, ResultHandlerArn 임시 parameter를 제거한다. ingress에는 Step Functions 시작 권한만 부여한다.
+5. focused tests, 전체 tests, SAM lint/build를 재실행한다. 배포, IAM 변경, secret 생성, Discord 설정은 Task 8 runbook과 account owner 작업으로 남긴다.
+
 ## Global Constraints
 
 - Accept only anonymized or synthetic data; never commit, log, or send personal data to an LLM.
