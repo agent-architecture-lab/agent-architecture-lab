@@ -1,0 +1,212 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Community operations dev workflow — uses Lambda and Standard Step Functions for a fixed, auditable route.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    arch: Discord ingress -> Lambda -> Standard Step Functions -> stage Lambdas -> result Lambda
+    must:
+      - dev only; no database, VPC, container, or production resource
+      - workflow state contains no secret or personal data
+    ref:
+      - docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev]
+    Description: Deployment environment. This stack supports dev only.
+  OpenAISecretArn:
+    Type: String
+    Description: ARN of the Secrets Manager secret holding the OpenAI API key.
+  ResultHandlerArn:
+    Type: String
+    Description: ARN of the Discord result Lambda added in Task 7.
+
+Resources:
+  ScreeningFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.screening_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  MatchingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.matching_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  FaqFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.faq_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          OPENAI_SECRET_ARN: !Ref OpenAISecretArn
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref OpenAISecretArn
+
+  ReflectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.stages.reflection_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  ScreeningLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ScreeningFunction}"
+      RetentionInDays: 7
+
+  MatchingLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${MatchingFunction}"
+      RetentionInDays: 7
+
+  FaqLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${FaqFunction}"
+      RetentionInDays: 7
+
+  ReflectionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ReflectionFunction}"
+      RetentionInDays: 7
+
+  StateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/vendedlogs/states/${AWS::StackName}-community"
+      RetentionInDays: 7
+
+  CommunityWorkflow:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: STANDARD
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StateMachineLogGroup.Arn
+        IncludeExecutionData: false
+        Level: ERROR
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              - !GetAtt ScreeningFunction.Arn
+              - !GetAtt MatchingFunction.Arn
+              - !GetAtt FaqFunction.Arn
+              - !GetAtt ReflectionFunction.Arn
+              - !Ref ResultHandlerArn
+      Definition:
+        StartAt: Screening
+        States:
+          Screening:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt ScreeningFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.screening"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: ScreeningStatus
+          ScreeningStatus:
+            Type: Choice
+            Choices:
+              - Variable: "$.screening.Payload.status"
+                StringEquals: failed
+                Next: ResultDelivery
+            Default: Matching
+          Matching:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt MatchingFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.matching"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: MatchingStatus
+          MatchingStatus:
+            Type: Choice
+            Choices:
+              - Variable: "$.matching.Payload.status"
+                StringEquals: failed
+                Next: ResultDelivery
+            Default: FAQ
+          FAQ:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt FaqFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.faq"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: FAQStatus
+          FAQStatus:
+            Type: Choice
+            Choices:
+              - Variable: "$.faq.Payload.status"
+                StringEquals: failed
+                Next: ResultDelivery
+            Default: Reflection
+          Reflection:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !GetAtt ReflectionFunction.Arn
+              Payload.$: "$"
+            ResultPath: "$.reflection"
+            Catch:
+              - ErrorEquals: [States.ALL]
+                ResultPath: "$.workflow_error"
+                Next: ResultDelivery
+            Next: ResultDelivery
+          ResultDelivery:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !Ref ResultHandlerArn
+              Payload.$: "$"
+            End: true
+
+Outputs:
+  StateMachineArn:
+    Description: ARN of the dev-only community workflow.
+    Value: !Ref CommunityWorkflow
