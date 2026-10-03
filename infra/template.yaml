@@ -44,7 +44,8 @@ Resources:
       CodeUri: ../src/
       Handler: handlers.discord_ingress.lambda_handler
       Runtime: python3.12
-      Timeout: 3
+      MemorySize: 512
+      Timeout: 10
       Environment:
         Variables:
           DISCORD_PUBLIC_KEY: !Ref DiscordPublicKey
