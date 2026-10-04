@@ -43,7 +43,7 @@ def _verified(headers: dict[str, str], body: bytes) -> bool:
 
 def _workflow_input(interaction: dict[str, Any]) -> dict[str, Any]:
     data = interaction.get("data", {})
-    return {
+    workflow_input = {
         "request": {
             "run_id": interaction["id"],
             "command": data["name"],
@@ -51,6 +51,22 @@ def _workflow_input(interaction: dict[str, Any]) -> dict[str, Any]:
         },
         "discord": {"interaction_token": interaction["token"]},
     }
+    if data.get("name") == "aal-test":
+        workflow_input.update(
+            {
+                "labels": {"attendance_commitment": "high"},
+                "candidates": [{"id": "candidate-1", "scores": {"availability": 2}}],
+                "constraints": {"availability": 10},
+                "question": "When do we meet?",
+                "query_embedding": [1.0, 0.0],
+                "answer": "Tuesday. Sources: faq-001",
+                "index": [{"id": "faq-001", "text": "Tuesday", "embedding": [1.0, 0.0]}],
+                "draft": "draft",
+                "review": {"accept": True},
+                "revision": "revised",
+            }
+        )
+    return workflow_input
 
 
 def _start_execution(workflow_input: dict[str, Any]) -> None:

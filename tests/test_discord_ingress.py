@@ -3,6 +3,12 @@ import json
 from nacl.signing import SigningKey
 
 from handlers.discord_ingress import lambda_handler
+from handlers.stages import (
+    faq_handler,
+    matching_handler,
+    reflection_handler,
+    screening_handler,
+)
 
 
 def event_for(body: str, signature: str) -> dict[str, object]:
@@ -51,6 +57,29 @@ def test_valid_command_defers_and_starts_workflow(monkeypatch) -> None:
             "discord": {"interaction_token": "interaction-token"},
         }
     ]
+
+
+def test_aal_test_starts_a_complete_synthetic_workflow(monkeypatch) -> None:
+    key = SigningKey.generate()
+    monkeypatch.setenv("DISCORD_PUBLIC_KEY", key.verify_key.encode().hex())
+    body = json.dumps(
+        {
+            "id": "run-1",
+            "type": 2,
+            "token": "interaction-token",
+            "data": {"name": "aal-test"},
+        }
+    )
+    signature = key.sign(b"123" + body.encode()).signature.hex()
+    started = []
+
+    lambda_handler(event_for(body, signature), None, starter=started.append)
+
+    workflow_input = started[0]
+    assert screening_handler(workflow_input, None)["status"] == "succeeded"
+    assert matching_handler(workflow_input, None)["status"] == "succeeded"
+    assert faq_handler(workflow_input, None)["status"] == "succeeded"
+    assert reflection_handler(workflow_input, None)["status"] == "succeeded"
 
 
 def test_verified_ping_returns_pong_without_starting_workflow(monkeypatch) -> None:
