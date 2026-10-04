@@ -2,6 +2,7 @@ import json
 import os
 from collections.abc import Callable
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -46,5 +47,11 @@ def _send_json(url: str, body: dict[str, Any]) -> None:
         },
         method="PATCH",
     )
-    with urlopen(request, timeout=5):
-        pass
+    try:
+        with urlopen(request, timeout=5):
+            pass
+    except HTTPError as error:
+        payload = json.loads(error.read() or "{}")
+        raise RuntimeError(
+            f"Discord result delivery failed: HTTP {error.code}, Discord code {payload.get('code')}"
+        ) from error
