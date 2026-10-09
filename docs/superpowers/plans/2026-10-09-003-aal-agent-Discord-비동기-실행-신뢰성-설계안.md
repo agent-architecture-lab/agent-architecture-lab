@@ -12,13 +12,13 @@ related: [docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md
 
 ## 상태
 
-로컬 구현과 정적 검증을 완료했다. dev 배포와 실제 Discord E2E는 account owner 실행 대기다.
+로컬 구현, 정적 검증, dev deployment를 완료했다. 실제 Discord E2E와 duplicate dispatch 실측이 남아 있다.
 
 ## 구현 상태
 
 - 완료: Task 1 interaction과 dispatch 계약, Task 2 idempotent dispatch와 SAM 연결, Task 3 결과 전달과 구조화 로그, Task 5 benchmark 승격 gate
-- 문서 갱신 완료: Task 4의 dev runbook과 benchmark runbook
-- 대기: clean dev stack deployment, Discord endpoint 대조, `aal-test` 실제 E2E, duplicate dispatch 실측
+- 완료: Task 4의 dev deployment, endpoint 대조, failure alarm 생성, dev 및 benchmark runbook 갱신
+- 대기: `aal-test` 실제 E2E와 duplicate dispatch 실측
 
 ## Executive Summary
 
