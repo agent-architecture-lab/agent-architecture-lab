@@ -26,6 +26,7 @@ sam deploy --region ap-northeast-2 --template-file infra/template.yaml --stack-n
 7. Confirm Discord immediately shows a deferred response, then locate the same `run_id` in ingress and dispatch Lambda logs. Do not copy interaction tokens or request bodies into notes.
 8. Confirm one Standard Step Functions execution starts for that `run_id` and the Discord result Lambda PATCHes the original deferred response.
 9. Repeat the identical dispatch payload only in a controlled dev test. Confirm the duplicate converges on the existing execution rather than starting a second workflow.
-10. Inspect the benchmark JSONL record and benchmark-gate JSON evidence before changing a prompt, model, RAG, context, or Reflection default. Do not send real personal data.
+10. Confirm the ingress, dispatch, workflow, and result CloudWatch Alarm resources remain `OK` before and after the test. They are visible test bed alarms; no notification target is configured.
+11. Inspect the benchmark JSONL record and benchmark-gate JSON evidence before changing a prompt, model, RAG, context, or Reflection default. Do not send real personal data.
 
 Do not deploy prod, change IAM outside this stack, or delete resources as part of this runbook.

@@ -65,6 +65,13 @@ Resources:
 
   DiscordDispatchFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Decouples Discord's three-second acknowledgement from durable workflow startup.
+        must:
+          - accepts only the minimal signed interaction payload from DiscordIngressFunction
+          - uses the interaction ID as the Standard workflow execution name
+          - never logs interaction tokens or request bodies
     Properties:
       CodeUri: ../src/
       Handler: handlers.discord_dispatch.lambda_handler
@@ -179,6 +186,94 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/vendedlogs/states/${AWS::StackName}-community"
       RetentionInDays: 7
+
+  DiscordIngressFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Makes failed Discord acknowledgements visible during dev test bed runs.
+        must:
+          - evaluates only the ingress Lambda Errors metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Discord ingress Lambda errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiscordIngressFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  DiscordDispatchFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Makes asynchronous dispatch failures visible before they become missing Discord results.
+        must:
+          - evaluates only the dispatch Lambda Errors metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Discord dispatch Lambda errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiscordDispatchFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  CommunityWorkflowFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Separates workflow execution failures from Lambda invocation failures in the dev test bed.
+        must:
+          - evaluates only the Standard workflow ExecutionsFailed metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Step Functions execution failures
+      Namespace: AWS/States
+      MetricName: ExecutionsFailed
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !Ref CommunityWorkflow
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  DiscordResultFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Makes failed final Discord message updates visible during dev test bed runs.
+        must:
+          - evaluates only the result Lambda Errors metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Discord result Lambda errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiscordResultFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
 
   DevMonthlyBudget:
     Type: AWS::Budgets::Budget
