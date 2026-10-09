@@ -92,4 +92,8 @@ def _dispatch(dispatch: dict[str, Any]) -> None:
 
 
 def _response(response_type: int) -> dict[str, Any]:
-    return {"statusCode": 200, "body": json.dumps({"type": response_type})}
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({"type": response_type}),
+    }

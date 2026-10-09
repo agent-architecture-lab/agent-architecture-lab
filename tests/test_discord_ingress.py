@@ -47,7 +47,11 @@ def test_aal_test_defers_after_async_dispatch_is_accepted(monkeypatch) -> None:
 
     response = lambda_handler(event_for(body, signature), None, dispatcher=dispatched.append)
 
-    assert response == {"statusCode": 200, "body": json.dumps({"type": 5})}
+    assert response == {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({"type": 5}),
+    }
     assert dispatched == [
         {
             "run_id": "run-1",
@@ -123,5 +127,9 @@ def test_verified_ping_returns_pong_without_starting_workflow(monkeypatch) -> No
 
     response = lambda_handler(event_for(body, signature), None, dispatcher=dispatcher.append)
 
-    assert response == {"statusCode": 200, "body": json.dumps({"type": 1})}
+    assert response == {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({"type": 1}),
+    }
     assert dispatcher == []
