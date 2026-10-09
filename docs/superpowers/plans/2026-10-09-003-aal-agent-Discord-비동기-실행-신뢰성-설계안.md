@@ -23,6 +23,7 @@ related: [docs/superpowers/specs/2026-10-03-001-agent-architecture-lab-design.md
 | 최종 응답 | 원본 deferred 응답을 PATCH | 재시도되어도 Discord 메시지가 중복 생성되지 않음 |
 | 관측 | `run_id` 중심 구조화 로그와 CloudWatch 경보 | 실패 위치와 Discord 오류 code를 한 조회에서 판별 |
 | 안전 | 허용된 slash command와 synthetic 입력만 실행 | 비허용 command, raw token, request body가 로그나 workflow에 남지 않음 |
+| 품질 승격 | 프롬프트, 모델, RAG, Reflection 변경은 locked benchmark의 비회귀 증거 뒤에만 기본값 변경 | 성공률과 citation 조건은 하락하지 않고 비용 또는 latency 개선이 확인됨 |
 
 현재 `DiscordIngressFunction`은 `start_execution`이 끝난 뒤 type 5 deferred 응답을 반환한다. Discord의 초기 응답 제한은 3초이므로 Lambda timeout을 10초로 늘려도 cold start, AWS SDK 초기화, StartExecution 지연 또는 권한 오류가 있으면 사용자는 timeout을 본다. 이 계획은 ingress의 동기 구간을 서명 검증, 최소 입력 검증, 비동기 dispatch 수락, type 5 응답으로만 제한한다.
 
@@ -117,6 +118,18 @@ CloudWatch 경보는 ingress 오류, dispatch 오류, Step Functions failed 또�
 
 dev E2E는 `aal-test` 한 번으로 initial deferred 응답, Standard execution, 최종 메시지 수정, 구조화 로그의 동일 `run_id`를 모두 확인한다. 같은 payload를 다시 전달해 execution 중복이 없는지도 확인한다.
 
+### 6. 프롬프트와 비용 변경은 benchmark gate를 통과해야 한다
+
+FAQ prompt, model, retrieval chunk 수, context 축약, Reflection 정책을 기본값으로 바꾸는 PR은 locked synthetic benchmark를 baseline과 candidate로 각각 실행한다. candidate는 아래 조건을 모두 만족할 때만 기본값으로 승격한다.
+
+- 모든 locked case가 실행을 완료하고 errored run이 없다.
+- 성공률과 FAQ citation 포함률이 baseline보다 낮지 않다.
+- `input_tokens`, `output_tokens`, `estimated_cost_usd`, `latency_ms` 중 사전에 선언한 개선 지표가 개선된다.
+- 성공률, citation, 비용, latency의 비교 결과와 실행 commit SHA를 Git 밖의 JSONL evidence에 남긴다.
+- 기본값 변경은 사람이 benchmark evidence를 검토한 뒤 승인한다.
+
+이 gate는 모델 품질을 토큰 절감과 바꾸지 않게 한다. benchmark는 외부 API 결과를 포함하므로 재현을 위해 case ID, 모델 ID, 설정 digest, code commit SHA만 Git에 기록하고 원문 입력, interaction token, secret은 기록하지 않는다.
+
 ## 작업 계획
 
 ### Task 1: interaction과 dispatch 계약 고정
@@ -190,6 +203,22 @@ dev E2E는 `aal-test` 한 번으로 initial deferred 응답, Standard execution,
 
 **의존성:** Checkpoint A, Task 3
 
+### Task 5: benchmark 승격 gate 구현
+
+**범위:** M
+
+**예상 파일:** `evaluations/run_benchmark.py`, `evaluations/cases.json`, `docs/benchmark.md`, benchmark tests
+
+**완료 조건:**
+
+- [ ] baseline과 candidate의 success, citation, token, cost, latency를 동일 case ID로 비교한다.
+- [ ] errored run, success 회귀, citation 회귀는 candidate 승격을 실패로 판정한다.
+- [ ] evidence에는 code commit SHA, model ID, 설정 digest, aggregate 지표만 남고 원문과 secret은 남지 않는다.
+
+**검증:** synthetic fixture로 success 회귀, citation 회귀, 비용 개선, errored run을 각각 재현하는 focused tests가 통과한다.
+
+**의존성:** Task 4
+
 ## 실행 순서와 책임
 
 ```mermaid
@@ -198,10 +227,12 @@ flowchart LR
     T2 --> A[Checkpoint A]
     A --> T3[Task 3 결과와 로그]
     T3 --> T4[Task 4 dev E2E]
+    T4 --> T5[Task 5 benchmark gate]
 ```
 
 - 구현자는 Task 1부터 Task 3까지 feature branch에서 수행한다.
 - account owner는 Checkpoint A 뒤 IAM 포함 dev deployment와 Discord endpoint 변경을 수행한다.
+- Task 5의 기본값 변경은 benchmark evidence를 검토한 사람이 승인한 뒤에만 반영한다.
 - prod 배포와 real data 사용은 이 계획 범위 밖이다.
 
 ## 위험과 완화
