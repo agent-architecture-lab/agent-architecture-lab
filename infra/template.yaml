@@ -49,12 +49,12 @@ Resources:
       Environment:
         Variables:
           DISCORD_PUBLIC_KEY: !Ref DiscordPublicKey
-          STATE_MACHINE_ARN: !Ref CommunityWorkflow
+          DISCORD_DISPATCH_FUNCTION_NAME: !Ref DiscordDispatchFunction
       Policies:
         - Statement:
             Effect: Allow
-            Action: states:StartExecution
-            Resource: !Ref CommunityWorkflow
+            Action: lambda:InvokeFunction
+            Resource: !GetAtt DiscordDispatchFunction.Arn
       Events:
         Interactions:
           Type: HttpApi
@@ -62,6 +62,22 @@ Resources:
             ApiId: !Ref DiscordApi
             Path: /discord/interactions
             Method: POST
+
+  DiscordDispatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.discord_dispatch.lambda_handler
+      Runtime: python3.12
+      Timeout: 10
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref CommunityWorkflow
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action: states:StartExecution
+            Resource: !Ref CommunityWorkflow
 
   DiscordResultFunction:
     Type: AWS::Serverless::Function

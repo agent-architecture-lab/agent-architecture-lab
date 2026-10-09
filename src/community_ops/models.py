@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,13 @@ class RunRequest(BaseModel):
     run_id: str
     command: str
     payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class DiscordDispatchRequest(BaseModel):
+    run_id: str
+    command: Literal["aal-test"]
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    interaction_token: str
 
 
 class StageResult(BaseModel):

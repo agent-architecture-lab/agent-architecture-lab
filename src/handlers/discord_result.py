@@ -6,6 +6,8 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from handlers.observability import emit
+
 
 def lambda_handler(
     event: dict[str, Any],
@@ -24,7 +26,13 @@ def lambda_handler(
         else "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
         "allowed_mentions": {"parse": []},
     }
-    (sender or _send_json)(url, body)
+    run_id = event.get("request", {}).get("run_id")
+    try:
+        (sender or _send_json)(url, body)
+    except RuntimeError:
+        emit("result_failed", component="result", run_id=run_id, outcome="result_failed")
+        raise
+    emit("result_sent", component="result", run_id=run_id, outcome="result_sent")
     return {"status": "sent"}
 
 
