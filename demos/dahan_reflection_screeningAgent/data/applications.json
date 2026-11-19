@@ -1,0 +1,47 @@
+[
+  {
+    "applicant_id":"A001", "display_name":"지원자 A (가상)",
+    "answers":[
+      {"question_id":"q_goal","question":"지원 동기와 배우고 싶은 것","answer":"RAG와 LangGraph로 질문응답 에이전트를 만들고 싶습니다. 8주 동안 동작하는 프로토타입을 만드는 게 목표입니다."},
+      {"question_id":"q_skills","question":"기술 경험","answer":"Python과 FastAPI로 웹 API를 개발했고 간단한 벡터 검색도 구현했습니다."},
+      {"question_id":"q_schedule","question":"참여 가능 일정","answer":"8주간 매주 목요일 20시 모임에 참석할 수 있습니다."},
+      {"question_id":"q_collab","question":"협업 경험과 계획","answer":"팀 프로젝트에서 코드 리뷰를 맡은 적이 있고 이번에도 문서화에 참여하겠습니다."}
+    ]
+  },
+  {
+    "applicant_id":"A002", "display_name":"지원자 B (가상)",
+    "answers":[
+      {"question_id":"q_goal","question":"지원 동기와 배우고 싶은 것","answer":"AI Agent가 무엇인지 공부하고 싶고 실습을 통해 경험을 쌓고 싶습니다."},
+      {"question_id":"q_skills","question":"기술 경험","answer":"Python 문법은 온라인 강의로 배웠지만 실제 프로젝트 경험은 없습니다."},
+      {"question_id":"q_schedule","question":"참여 가능 일정","answer":"매주 목요일 20시에 참여할 수 있습니다."},
+      {"question_id":"q_collab","question":"협업 경험과 계획","answer":"팀원과 함께 학습한 내용을 정리하고 싶습니다."}
+    ]
+  },
+  {
+    "applicant_id":"A003", "display_name":"지원자 C (가상)",
+    "answers":[
+      {"question_id":"q_goal","question":"지원 동기와 배우고 싶은 것","answer":"관심 있어서 지원했습니다."},
+      {"question_id":"q_skills","question":"기술 경험","answer":"데이터 분석 경험이 조금 있습니다."},
+      {"question_id":"q_schedule","question":"참여 가능 일정","answer":""},
+      {"question_id":"q_collab","question":"협업 경험과 계획","answer":""}
+    ]
+  },
+  {
+    "applicant_id":"A004", "display_name":"지원자 D (가상)",
+    "answers":[
+      {"question_id":"q_goal","question":"지원 동기와 배우고 싶은 것","answer":"LangGraph 기반 워크플로를 설계하고 실제 데모를 만들어 보고 싶습니다."},
+      {"question_id":"q_skills","question":"기술 경험","answer":"Python과 LangChain을 이용한 프로젝트를 진행했습니다."},
+      {"question_id":"q_schedule","question":"참여 가능 일정","answer":"목요일 저녁에는 근무하므로 20시 모임에 참석할 수 없습니다."},
+      {"question_id":"q_collab","question":"협업 경험과 계획","answer":"스터디 자료를 함께 만들고 피드백을 주고받고 싶습니다."}
+    ]
+  },
+  {
+    "applicant_id":"A005", "display_name":"지원자 E (가상)",
+    "answers":[
+      {"question_id":"q_goal","question":"지원 동기와 배우고 싶은 것","answer":"AI 시스템 운영 자동화에 관심이 있으며 도구 호출과 에이전트 설계를 익히고 싶습니다."},
+      {"question_id":"q_skills","question":"기술 경험","answer":"Python으로 ETL 파이프라인을 구현했고 Docker 배포 경험이 있습니다."},
+      {"question_id":"q_schedule","question":"참여 가능 일정","answer":"목요일 20시 정기 모임에 참석 가능하지만 출장 주간은 사전 협의가 필요합니다."},
+      {"question_id":"q_collab","question":"협업 경험과 계획","answer":"공통 저장소의 이슈와 PR을 정리하는 역할을 맡을 수 있습니다."}
+    ]
+  }
+]
