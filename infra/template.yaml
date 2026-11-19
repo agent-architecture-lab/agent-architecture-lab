@@ -23,6 +23,9 @@ Parameters:
   OpenAISecretArn:
     Type: String
     Description: ARN of the Secrets Manager secret holding the OpenAI API key.
+  FaqModel:
+    Type: String
+    Description: Owner-approved chat model for FAQ answers.
   DiscordApplicationId:
     Type: String
     Description: Discord application ID used for result delivery.
@@ -33,8 +36,52 @@ Parameters:
     Type: String
     NoEcho: true
     Description: Email address for 5, 8, and 10 USD monthly budget alerts.
+  OperationsAlarmTopicArn:
+    Type: String
+    AllowedPattern: "arn:[a-z0-9-]+:sns:[a-z0-9-]+:[0-9]{12}:[A-Za-z0-9_-]+"
+    Description: Existing owner-approved SNS topic for dev operational alarms.
 
 Resources:
+  AskPayloadBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireAbandonedAskPayloads
+            Status: Enabled
+            ExpirationInDays: 1
+
+  AskPayloadBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AskPayloadBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !GetAtt AskPayloadBucket.Arn
+              - !Sub "${AskPayloadBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
   DiscordApi:
     Type: AWS::Serverless::HttpApi
 
@@ -49,12 +96,12 @@ Resources:
       Environment:
         Variables:
           DISCORD_PUBLIC_KEY: !Ref DiscordPublicKey
-          STATE_MACHINE_ARN: !Ref CommunityWorkflow
+          DISCORD_DISPATCH_FUNCTION_NAME: !Ref DiscordDispatchFunction
       Policies:
         - Statement:
             Effect: Allow
-            Action: states:StartExecution
-            Resource: !Ref CommunityWorkflow
+            Action: lambda:InvokeFunction
+            Resource: !GetAtt DiscordDispatchFunction.Arn
       Events:
         Interactions:
           Type: HttpApi
@@ -62,6 +109,39 @@ Resources:
             ApiId: !Ref DiscordApi
             Path: /discord/interactions
             Method: POST
+
+  DiscordDispatchFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Decouples Discord's three-second acknowledgement from durable workflow startup.
+        must:
+          - accepts only the minimal signed interaction payload from DiscordIngressFunction
+          - uses the interaction ID as the Standard workflow execution name
+          - never logs interaction tokens or request bodies
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.discord_dispatch.lambda_handler
+      Runtime: python3.12
+      Timeout: 10
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 120
+        MaximumRetryAttempts: 1
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref CommunityWorkflow
+          ASK_PAYLOAD_BUCKET: !Ref AskPayloadBucket
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action: states:StartExecution
+            Resource: !Ref CommunityWorkflow
+        - Statement:
+            Effect: Allow
+            Action: s3:PutObject
+            Resource:
+              - !Sub "${AskPayloadBucket.Arn}/question/*"
+              - !Sub "${AskPayloadBucket.Arn}/token/*"
 
   DiscordResultFunction:
     Type: AWS::Serverless::Function
@@ -73,6 +153,20 @@ Resources:
       Environment:
         Variables:
           DISCORD_APPLICATION_ID: !Ref DiscordApplicationId
+          ASK_PAYLOAD_BUCKET: !Ref AskPayloadBucket
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: s3:GetObject
+              Resource:
+                - !Sub "${AskPayloadBucket.Arn}/token/*"
+                - !Sub "${AskPayloadBucket.Arn}/answer/*"
+            - Effect: Allow
+              Action: s3:DeleteObject
+              Resource:
+                - !Sub "${AskPayloadBucket.Arn}/question/*"
+                - !Sub "${AskPayloadBucket.Arn}/token/*"
+                - !Sub "${AskPayloadBucket.Arn}/answer/*"
 
   ScreeningFunction:
     Type: AWS::Serverless::Function
@@ -100,16 +194,25 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../src/
-      Handler: handlers.stages.faq_handler
+      Handler: handlers.stages.faq_workflow_handler
       Runtime: python3.12
-      Timeout: 10
+      Timeout: 20
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
           OPENAI_SECRET_ARN: !Ref OpenAISecretArn
+          FAQ_MODEL: !Ref FaqModel
+          ASK_PAYLOAD_BUCKET: !Ref AskPayloadBucket
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Ref OpenAISecretArn
+        - Statement:
+            - Effect: Allow
+              Action: s3:GetObject
+              Resource: !Sub "${AskPayloadBucket.Arn}/question/*"
+            - Effect: Allow
+              Action: s3:PutObject
+              Resource: !Sub "${AskPayloadBucket.Arn}/answer/*"
 
   ReflectionFunction:
     Type: AWS::Serverless::Function
@@ -163,6 +266,132 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/vendedlogs/states/${AWS::StackName}-community"
       RetentionInDays: 7
+
+  DiscordIngressFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Makes failed Discord acknowledgements visible during dev test bed runs.
+        must:
+          - evaluates only the ingress Lambda Errors metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Discord ingress Lambda errors
+      AlarmActions: [!Ref OperationsAlarmTopicArn]
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiscordIngressFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  DiscordDispatchFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Makes asynchronous dispatch failures visible before they become missing Discord results.
+        must:
+          - evaluates only the dispatch Lambda Errors metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Discord dispatch Lambda errors
+      AlarmActions: [!Ref OperationsAlarmTopicArn]
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiscordDispatchFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  CommunityWorkflowFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Separates workflow execution failures from Lambda invocation failures in the dev test bed.
+        must:
+          - evaluates only the Standard workflow ExecutionsFailed metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Step Functions execution failures
+      AlarmActions: [!Ref OperationsAlarmTopicArn]
+      Namespace: AWS/States
+      MetricName: ExecutionsFailed
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !Ref CommunityWorkflow
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  DiscordResultFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Makes failed final Discord message updates visible during dev test bed runs.
+        must:
+          - evaluates only the result Lambda Errors metric
+          - treats missing data as non-breaching
+    Properties:
+      AlarmDescription: community-ops dev Discord result Lambda errors
+      AlarmActions: [!Ref OperationsAlarmTopicArn]
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiscordResultFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  CommunityWorkflowTimeoutAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: community-ops dev Step Functions executions missing their deadline
+      AlarmActions: [!Ref OperationsAlarmTopicArn]
+      Namespace: AWS/States
+      MetricName: ExecutionsTimedOut
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !Ref CommunityWorkflow
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  DiscordDispatchDroppedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: community-ops dev queued Discord events dropped before completion
+      AlarmActions: [!Ref OperationsAlarmTopicArn]
+      Namespace: AWS/Lambda
+      MetricName: AsyncEventsDropped
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DiscordDispatchFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
 
   DevMonthlyBudget:
     Type: AWS::Budgets::Budget
@@ -233,46 +462,9 @@ Resources:
               - logs:DescribeLogGroups
             Resource: "*"
       Definition:
-        StartAt: Screening
+        StartAt: FAQ
+        TimeoutSeconds: 60
         States:
-          Screening:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              FunctionName: !GetAtt ScreeningFunction.Arn
-              Payload.$: "$"
-            ResultPath: "$.screening"
-            Catch:
-              - ErrorEquals: [States.ALL]
-                ResultPath: "$.workflow_error"
-                Next: ResultDelivery
-            Next: ScreeningStatus
-          ScreeningStatus:
-            Type: Choice
-            Choices:
-              - Variable: "$.screening.Payload.status"
-                StringEquals: failed
-                Next: ResultDelivery
-            Default: Matching
-          Matching:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              FunctionName: !GetAtt MatchingFunction.Arn
-              Payload.$: "$"
-            ResultPath: "$.matching"
-            Catch:
-              - ErrorEquals: [States.ALL]
-                ResultPath: "$.workflow_error"
-                Next: ResultDelivery
-            Next: MatchingStatus
-          MatchingStatus:
-            Type: Choice
-            Choices:
-              - Variable: "$.matching.Payload.status"
-                StringEquals: failed
-                Next: ResultDelivery
-            Default: FAQ
           FAQ:
             Type: Task
             Resource: arn:aws:states:::lambda:invoke
@@ -282,26 +474,7 @@ Resources:
             ResultPath: "$.faq"
             Catch:
               - ErrorEquals: [States.ALL]
-                ResultPath: "$.workflow_error"
-                Next: ResultDelivery
-            Next: FAQStatus
-          FAQStatus:
-            Type: Choice
-            Choices:
-              - Variable: "$.faq.Payload.status"
-                StringEquals: failed
-                Next: ResultDelivery
-            Default: Reflection
-          Reflection:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              FunctionName: !GetAtt ReflectionFunction.Arn
-              Payload.$: "$"
-            ResultPath: "$.reflection"
-            Catch:
-              - ErrorEquals: [States.ALL]
-                ResultPath: "$.workflow_error"
+                ResultPath: null
                 Next: ResultDelivery
             Next: ResultDelivery
           ResultDelivery:

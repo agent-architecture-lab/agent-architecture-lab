@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "observed_at_kst": "2026-11-04 22:59 KST",
+  "status": "source-verified-draft",
+  "runtime_enabled": false,
+  "corpus_path": "assets/faq/source.md",
+  "corpus_sha256": "9325130f6bd18758b1577f54bc694acc76da86992bec9fe7ae3df06b8eec94a4",
+  "sources": [
+    {
+      "id": "onboarding",
+      "repository": "agent-architecture-lab/aal-onboarding",
+      "path": "README.md",
+      "commit": "5d893f444b14ffc9703fe35d2b572329db3f96a7",
+      "sha256": "fdf13a468b7c659006f52fd20543fa838589a9a286ddff8df378239f33488416",
+      "url": "https://github.com/agent-architecture-lab/aal-onboarding/blob/5d893f444b14ffc9703fe35d2b572329db3f96a7/README.md",
+      "source_status": "v0.2 draft; reading plan v0.1 proposal"
+    },
+    {
+      "id": "implementation",
+      "repository": "agent-architecture-lab/agent-architecture-lab",
+      "path": "README.md",
+      "commit": "150f8dfb244d383d2f16a46635456ce069cbd8ef",
+      "sha256": "d0fe7f09b5d24b33f3c215cb04e7c4d0650484d0a53eb41f8daa9cc7a6fac2e6",
+      "url": "https://github.com/agent-architecture-lab/agent-architecture-lab/blob/150f8dfb244d383d2f16a46635456ce069cbd8ef/README.md",
+      "source_status": "remote main documentation"
+    }
+  ],
+  "faq_items": [
+    {
+      "id": "aal-faq-001",
+      "source_id": "implementation",
+      "lines": [
+        1,
+        23
+      ]
+    },
+    {
+      "id": "aal-faq-002",
+      "source_id": "implementation",
+      "lines": [
+        25,
+        33
+      ]
+    },
+    {
+      "id": "aal-faq-003",
+      "source_id": "onboarding",
+      "lines": [
+        292,
+        302
+      ]
+    },
+    {
+      "id": "aal-faq-004",
+      "source_id": "onboarding",
+      "lines": [
+        254,
+        258
+      ]
+    },
+    {
+      "id": "aal-faq-005",
+      "source_id": "onboarding",
+      "lines": [
+        254,
+        258
+      ]
+    },
+    {
+      "id": "aal-faq-006",
+      "source_id": "onboarding",
+      "lines": [
+        254,
+        258
+      ]
+    },
+    {
+      "id": "aal-faq-007",
+      "source_id": "onboarding",
+      "lines": [
+        292,
+        302
+      ]
+    },
+    {
+      "id": "aal-faq-008",
+      "source_id": "onboarding",
+      "lines": [
+        272,
+        281
+      ]
+    }
+  ],
+  "excluded_topics": [
+    "session_schedule",
+    "participant_records",
+    "current_bot_availability",
+    "current_pricing",
+    "installation_versions"
+  ],
+  "retired_example_ids": [
+    "faq-001",
+    "faq-002"
+  ],
+  "planned_index_path": "src/assets/faq/index.json",
+  "synthetic_fixture_path": "tests/fixtures/faq-packaging-index.json"
+}

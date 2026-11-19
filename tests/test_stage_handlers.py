@@ -29,18 +29,26 @@ def test_matching_handler_returns_serializable_stage_result():
 
 
 def test_faq_handler_requires_citations_in_answer():
+    source = {
+        "id": "faq-001",
+        "text": "Tuesday",
+        "source_url": "https://github.com/example/repo/blob/0123456789012345678901234567890123456789/README.md",
+    }
     response = faq_handler(
         {
-            "request": sample_request(),
-            "question": "When do we meet?",
-            "query_embedding": [1.0, 0.0],
-            "answer": "Tuesday. Sources: faq-001",
-            "index": [{"id": "faq-001", "text": "Tuesday", "embedding": [1.0, 0.0]}],
+            "request": {
+                "run_id": "run-1",
+                "command": "ask",
+                "payload": {"question": "When do we meet?"},
+            },
         },
         None,
+        searcher=lambda _: {"status": "matches", "hits": [source]},
+        answerer=lambda *_: {"answer": "Tuesday."},
     )
 
-    assert response["data"]["source_ids"] == ["faq-001"]
+    assert response["status"] == "failed"
+    assert response["error"] == "FAQ answer did not cite its source"
 
 
 def test_reflection_handler_returns_revised_text():

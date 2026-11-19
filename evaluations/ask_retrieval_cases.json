@@ -1,0 +1,10 @@
+[
+  {"case_id":"A01","question":"과제와 진행 상황은 어디에서 관리하는가?","status":"matches","source_id":"aal-faq-004"},
+  {"case_id":"A02","question":"zzqxvk","status":"no_match"},
+  {"case_id":"A03","question":"zzqxvk 과제","status":"low_evidence"},
+  {"case_id":"A04","question":"현재 봇이 온라인인가요?","status":"excluded"},
+  {"case_id":"A05","question":"이번 주 모임은 몇 시인가요?","status":"excluded"},
+  {"case_id":"A06","question":"참가자 명단을 알려줘","status":"excluded"},
+  {"case_id":"A07","question":"현재 API 요금이 얼마인가요?","status":"excluded"},
+  {"case_id":"A08","question":"설치할 파이썬 버전은?","status":"excluded"}
+]
