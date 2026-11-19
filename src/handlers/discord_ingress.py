@@ -6,13 +6,17 @@ from typing import Any
 
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
+from pydantic import ValidationError
+
+from community_ops.models import DiscordDispatchRequest
+from handlers.observability import emit
 
 
 def lambda_handler(
     event: dict[str, Any],
     _context: object,
     *,
-    starter: Callable[[dict[str, Any]], None] | None = None,
+    dispatcher: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     headers = {key.lower(): value for key, value in event.get("headers", {}).items()}
     body = event.get("body") or ""
@@ -26,7 +30,29 @@ def lambda_handler(
     if interaction.get("type") != 2:
         return {"statusCode": 400, "body": "unsupported interaction"}
 
-    (starter or _start_execution)(_workflow_input(interaction))
+    try:
+        dispatch = _dispatch_request(interaction)
+    except ValidationError:
+        emit("interaction_rejected", component="ingress", outcome="rejected")
+        return {"statusCode": 400, "body": "unsupported command"}
+    try:
+        (dispatcher or _dispatch)(dispatch)
+    except Exception:  # noqa: BLE001 - an interaction endpoint must return a safe failure for any dispatch transport error.
+        emit(
+            "dispatch_failed",
+            component="ingress",
+            run_id=dispatch["run_id"],
+            command=dispatch["command"],
+            outcome="dispatch_failed",
+        )
+        return {"statusCode": 500, "body": "dispatch unavailable"}
+    emit(
+        "interaction_accepted",
+        component="ingress",
+        run_id=dispatch["run_id"],
+        command=dispatch["command"],
+        outcome="accepted",
+    )
     return _response(5)
 
 
@@ -41,26 +67,40 @@ def _verified(headers: dict[str, str], body: bytes) -> bool:
     return True
 
 
-def _workflow_input(interaction: dict[str, Any]) -> dict[str, Any]:
-    data = interaction.get("data", {})
-    return {
-        "request": {
-            "run_id": interaction["id"],
-            "command": data["name"],
-            "payload": {"options": data.get("options", [])},
+def _dispatch_request(interaction: dict[str, Any]) -> dict[str, Any]:
+    data = interaction.get("data")
+    command = data.get("name") if isinstance(data, dict) else None
+    options = data.get("options", []) if isinstance(data, dict) else []
+    question: object = None
+    if isinstance(options, list) and len(options) == 1 and isinstance(options[0], dict):
+        option = options[0]
+        if option.get("name") == "question" and option.get("type") == 3:
+            value = option.get("value")
+            question = value.strip() if isinstance(value, str) else value
+    return DiscordDispatchRequest.model_validate(
+        {
+            "run_id": interaction.get("id"),
+            "command": command,
+            "question": question,
+            "interaction_token": interaction.get("token"),
         },
-        "discord": {"interaction_token": interaction["token"]},
-    }
+        strict=True,
+    ).model_dump()
 
 
-def _start_execution(workflow_input: dict[str, Any]) -> None:
+def _dispatch(dispatch: dict[str, Any]) -> None:
     import boto3
 
-    boto3.client("stepfunctions").start_execution(
-        stateMachineArn=os.environ["STATE_MACHINE_ARN"],
-        input=json.dumps(workflow_input, separators=(",", ":")),
+    boto3.client("lambda").invoke(
+        FunctionName=os.environ["DISCORD_DISPATCH_FUNCTION_NAME"],
+        InvocationType="Event",
+        Payload=json.dumps(dispatch, separators=(",", ":")).encode(),
     )
 
 
 def _response(response_type: int) -> dict[str, Any]:
-    return {"statusCode": 200, "body": json.dumps({"type": response_type})}
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({"type": response_type}),
+    }

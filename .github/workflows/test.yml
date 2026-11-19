@@ -12,13 +12,35 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SAM_BUILD_IMAGE: public.ecr.aws/sam/build-python3.12@sha256:6b977f28341c892f743070ef945b600f1b257b668003720dc3bc9b1839fcd666
+      SAM_CLI_TELEMETRY: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.19"
       - uses: aws-actions/setup-sam@v2
-      - run: uv sync --all-groups
-      - run: uv run pytest -q
+        with:
+          version: "1.166.2"
+      - run: uv sync --locked --all-groups
+      - run: uv run --locked python scripts/export_requirements.py
+      - run: uv run --locked python scripts/build_faq_index.py build --encoder lexical --check
+      - run: uv run --locked pytest -q
       - run: sam validate --lint --template-file infra/template.yaml
+      - run: docker pull --platform linux/amd64 "$SAM_BUILD_IMAGE"
+      - run: sam build --use-container --skip-pull-image --no-cached --build-image "$SAM_BUILD_IMAGE" --template-file infra/template.yaml
+      - name: Verify dependencies, imports, study FAQ and synthetic fixtures
+        run: >-
+          uv run --locked python scripts/verify_package.py
+          --image "$SAM_BUILD_IMAGE"
+          --synthetic-index tests/fixtures/faq-packaging-index.json
+          --output evaluations/poc/release-manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: study-faq-package-verification
+          path: evaluations/poc/release-manifest.json
+          if-no-files-found: error

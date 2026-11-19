@@ -1,0 +1,12 @@
+[
+  {
+    "id": "synthetic-packaging-001",
+    "text": "Synthetic packaging test only. This is not an approved community FAQ.",
+    "embedding": [1.0, 0.0]
+  },
+  {
+    "id": "synthetic-packaging-002",
+    "text": "Synthetic test data must not be used as operational community guidance.",
+    "embedding": [0.0, 1.0]
+  }
+]
