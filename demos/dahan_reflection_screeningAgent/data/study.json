@@ -1,0 +1,16 @@
+{
+  "study_id": "AGENT_LAB_2026",
+  "title": "AI Agent Architecture Lab (가상 스터디)",
+  "description": "8주간 Python과 LangGraph를 활용하여 Agent를 학습하고 작은 프로젝트를 완성하는 스터디",
+  "rules": ["매주 목요일 20:00 정기 모임 참석", "Python 기초 문법 이해", "팀 단위 결과물 제작에 참여"],
+  "rubric_version": "1.0",
+  "criteria": [
+    {"id":"topic_fit","name":"주제 적합성","weight":30,"guide":"스터디 목적과 지원자가 원하는 학습·개발 주제가 얼마나 직접적으로 연결되는가"},
+    {"id":"attendance","name":"참여 조건","weight":25,"guide":"매주 목요일 20시 모임과 8주 활동 가능 여부. 미기재는 확인 불가로 처리"},
+    {"id":"technical","name":"기술적 준비도","weight":20,"guide":"Python 기초를 확인할 수 있는 프로젝트·학습 경험. LangGraph 경험 자체는 필수가 아님"},
+    {"id":"goal","name":"학습 목표의 구체성","weight":15,"guide":"8주 동안 익힐 기술·완성할 결과가 구체적인가"},
+    {"id":"collaboration","name":"협업 준비도","weight":10,"guide":"팀 프로젝트 참여 의사 또는 관련 활동·계획이 드러나는가. 근거 부족 시 unknown"}
+  ],
+  "grade_scale": {"4":"구체적 근거로 충분히 충족", "3":"충족 근거 있으나 일부 세부 내용 부족", "2":"부분 충족", "1":"관련성 약하거나 부족함이 명확", "0":"명시 조건과 불일치"},
+  "policy": "지원자를 자동 선발·탈락시키지 않는다. 지원자의 인적 배경, 표현 능력, 문체로 추측하지 않는다. 원문과 루브릭이 평가의 전부다."
+}

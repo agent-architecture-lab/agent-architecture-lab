@@ -1,0 +1,7 @@
+{
+  "A001": {"topic_fit":[4,"q_goal"],"attendance":[4,"q_schedule"],"technical":[4,"q_skills"],"goal":[4,"q_goal"],"collaboration":[4,"q_collab"]},
+  "A002": {"topic_fit":[3,"q_goal"],"attendance":[4,"q_schedule"],"technical":[2,"q_skills"],"goal":[2,"q_goal"],"collaboration":[3,"q_collab"]},
+  "A003": {"topic_fit":[1,"q_goal"],"attendance":[null,null],"technical":[null,null],"goal":[1,"q_goal"],"collaboration":[null,null]},
+  "A004": {"topic_fit":[4,"q_goal"],"attendance":[0,"q_schedule"],"technical":[4,"q_skills"],"goal":[3,"q_goal"],"collaboration":[3,"q_collab"]},
+  "A005": {"topic_fit":[3,"q_goal"],"attendance":[2,"q_schedule"],"technical":[4,"q_skills"],"goal":[3,"q_goal"],"collaboration":[4,"q_collab"]}
+}
