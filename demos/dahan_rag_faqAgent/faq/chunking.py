@@ -8,6 +8,9 @@ from pathlib import Path
 from .schemas import Chunk, SourceDocument
 
 HEADING = re.compile(r"^## (?P<id>[a-z]+-\d{3}) \| (?P<title>.+)$")
+COHORT_IN_TITLE = re.compile(r"(\d{1,2}(?:·\d{1,2})*)기")
+# 질문 속 "5기", "3기는" 같은 기수 표현. "기간", "기술"처럼 '기'로 시작하는 단어는 제외한다.
+COHORT_IN_QUESTION = re.compile(r"(?<![\d.])(\d{1,2})\s?기(?![가-힣])|(?<![\d.])(\d{1,2})기(?=[은는이가의에도와과를을요])")
 
 
 def _frontmatter(text: str) -> tuple[dict[str, str], str]:
@@ -39,7 +42,12 @@ def parse_source(text: str) -> SourceDocument:
         elif current is not None and line.strip():
             current["lines"].append(line.strip())
 
-    parsed = [Chunk(chunk_id=c["chunk_id"], title=c["title"], text="\n".join(c["lines"])) for c in chunks]
+    doc_cohorts = [int(meta["cohort"])] if meta.get("cohort") else None
+    parsed = [Chunk(chunk_id=c["chunk_id"], title=c["title"], text="\n".join(c["lines"]),
+                    source_id=meta["source_id"], doc_title=meta["title"], doc_version=meta["version"],
+                    cohorts=doc_cohorts if doc_cohorts is not None else _title_cohorts(c["title"]),
+                    doc_type=meta.get("doc_type", "official"), stage=meta.get("stage", ""), url=meta.get("url", ""))
+              for c in chunks]
     ids = [c.chunk_id for c in parsed]
     if not parsed:
         raise ValueError("청크가 하나도 없습니다.")
@@ -56,8 +64,42 @@ def parse_source(text: str) -> SourceDocument:
     )
 
 
+def _title_cohorts(title: str) -> list[int]:
+    """'1·2기 활동 사례집' → [1, 2]. 문서 frontmatter에 cohort가 없을 때만 쓴다."""
+    match = COHORT_IN_TITLE.search(title)
+    return [int(n) for n in match.group(1).split("·")] if match else []
+
+
+def question_cohort(question: str) -> int | None:
+    match = COHORT_IN_QUESTION.search(question)
+    return int(match.group(1) or match.group(2)) if match else None
+
+
 def load_source(path: str | Path) -> SourceDocument:
     return parse_source(Path(path).read_text(encoding="utf-8"))
+
+
+def merge_sources(docs: list[SourceDocument]) -> SourceDocument:
+    """여러 문서를 하나의 지식 베이스로 합친다. 청크 ID는 문서 전체에서 유일해야 한다."""
+    if not docs:
+        raise ValueError("지식 베이스 문서가 없습니다.")
+    chunks = [c for d in docs for c in d.chunks]
+    ids = [c.chunk_id for c in chunks]
+    duplicates = sorted({i for i in ids if ids.count(i) > 1})
+    if duplicates:
+        raise ValueError(f"문서 간 청크 ID가 중복되었습니다: {duplicates}")
+    return SourceDocument(
+        source_id="knowledge-base",
+        version="+".join(f"{d.source_id}@{d.version}" for d in docs),
+        title="잇츠 스터디 지식 베이스",
+        sha256=hashlib.sha256("".join(d.sha256 for d in docs).encode()).hexdigest(),
+        chunks=chunks,
+    )
+
+
+def load_knowledge_base(directory: str | Path) -> SourceDocument:
+    paths = sorted(Path(directory).glob("*.md"))
+    return merge_sources([load_source(p) for p in paths])
 
 
 def sentences(text: str) -> list[str]:

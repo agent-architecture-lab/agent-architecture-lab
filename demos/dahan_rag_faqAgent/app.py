@@ -5,18 +5,18 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
-from faq import EVAL_PATH, SOURCE_PATH, build_agent, load_source
+from faq import EVAL_PATH, KB_DIR, build_agent, load_knowledge_base
 from faq.evaluation import evaluate
 
 load_dotenv()
-SOURCE = load_source(SOURCE_PATH)
+SOURCE = load_knowledge_base(KB_DIR)
 STATUS_LABEL = {"answered": "✅ 답변", "no_answer": "❔ 공고에 없음",
                 "blocked": "⛔ 다루지 않는 요청", "rejected": "⚠️ 근거 검증 실패 · 보류"}
 
 st.set_page_config(page_title="Study FAQ · RAG", page_icon="💬", layout="wide")
-st.title("💬 스터디 모집 FAQ 에이전트 (RAG)")
-st.caption("모집 공고만 근거로 답하고, 모든 답변에 출처 청크를 붙입니다. "
-           "공고에 없는 내용과 선발·평가 관련 요청은 답하지 않습니다.")
+st.title("💬 잇츠 스터디 FAQ 에이전트 (RAG)")
+st.caption("지식 베이스(모집 공고·기수별 활동 안내)만 근거로 답하고, 모든 답변에 출처 청크를 붙입니다. "
+           "자료에 없는 내용, 지식 베이스에 없는 기수, 선발·평가 관련 요청은 답하지 않습니다.")
 
 with st.sidebar:
     st.header("실행 설정")
@@ -39,7 +39,7 @@ ask_tab, eval_tab, source_tab = st.tabs(["질문하기", "평가 질문셋", "�
 
 with ask_tab:
     examples = ["신청 기간이 언제까지인가요?", "정규 모임은 무슨 요일 몇 시에 하나요?",
-                "오프라인 모임에 꼭 참석해야 하나요?", "참가비는 얼마인가요?"]
+                "오프라인 모임에 꼭 참석해야 하나요?", "참가비는 얼마인가요?", "3기는 어떤 활동을 했나요?", "6기 모집은 언제 하나요?"]
     picked = st.selectbox("예시 질문", ["(직접 입력)"] + examples)
     question = st.text_input("질문", "" if picked == "(직접 입력)" else picked, max_chars=300)
     if st.button("질문하기", type="primary") and question.strip():
@@ -92,4 +92,5 @@ with eval_tab:
 with source_tab:
     for chunk in SOURCE.chunks:
         with st.expander(f"[{chunk.chunk_id}] {chunk.title}"):
+            st.caption(f"{chunk.doc_title} · {chunk.doc_version} · 기수 {chunk.cohorts or '공통'}")
             st.text(chunk.text)

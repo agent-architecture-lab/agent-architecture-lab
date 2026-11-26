@@ -10,9 +10,11 @@ from .routing import MockSupervisor, OpenAISupervisor
 from .schemas import AssistantRequest, RetroEntry
 
 
-def build_orchestrator(mode: str = "simulation", chat_model: str = "gpt-4.1-mini") -> Orchestrator:
+def build_orchestrator(mode: str = "simulation", chat_model: str = "gpt-4.1-mini", trace_sink=None,
+                       review_path=None) -> Orchestrator:
     supervisor = MockSupervisor() if mode == "simulation" else OpenAISupervisor(chat_model)
-    return Orchestrator(build_specialists(mode, chat_model), supervisor)
+    kwargs = {"review_path": review_path} if review_path else {}
+    return Orchestrator(build_specialists(mode, chat_model, **kwargs), supervisor, trace_sink)
 
 
 def load_retros() -> dict[str, RetroEntry]:
@@ -25,7 +27,8 @@ def load_cases() -> list[dict]:
     cases = []
     for row in json.loads((DATA_DIR / "requests.json").read_text(encoding="utf-8")):
         request = AssistantRequest(request_id=row["request_id"], role=row["role"], text=row["text"],
-                                   retro=retros[row["retro_id"]] if row.get("retro_id") else None)
+                                   retro=retros[row["retro_id"]] if row.get("retro_id") else None,
+                                   review_consent=row.get("review_consent", False))
         cases.append({"request": request, "expected_route": row["expected_route"],
                       "expected_outcomes": row["expected_outcomes"]})
     return cases

@@ -1,7 +1,10 @@
 ---
 source_id: agent-architecture-lab-recruitment
 version: 2026-fall-v1
-title: 에이전트 아키텍처 랩 스터디 모집 공고
+title: 5기 에이전트 아키텍처 랩 모집 공고
+cohort: 5
+doc_type: official
+stage: before
 note: 모집 공고 원문을 섹션 단위로 정리한 FAQ 지식 소스입니다. 리더 개인 정보는 데모용으로 익명화했습니다.
 ---
 

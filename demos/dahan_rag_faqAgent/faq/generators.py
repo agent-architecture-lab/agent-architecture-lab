@@ -15,15 +15,19 @@ class ExtractiveGenerator:
 
     name = "extractive-simulation"
 
-    def __init__(self):
+    def __init__(self, embedder=None):
         self.calls = 0
+        # 임베더의 IDF를 받으면 흔한 단어보다 드문 단어가 겹치는 문장을 고른다
+        self.weight = (lambda f: embedder.idf[embedder.vocab[f]] if f in embedder.vocab else 1.0) \
+            if embedder is not None and getattr(embedder, "idf", None) else (lambda f: 1.0)
 
     def generate(self, question: str, retrieved: list[RetrievedChunk]) -> FaqDraft:
         query = set(features(question))
-        best: tuple[int, int, str, str] | None = None  # (겹침 수, -검색 순위, chunk_id, 문장)
+        best: tuple[float, int, str, str] | None = None  # (가중 겹침, -검색 순위, chunk_id, 문장)
         for rank, item in enumerate(retrieved):
             for sentence in sentences(item.chunk.text):
-                overlap = len(query & set(features(sentence)))
+                # 검색 순위가 높은 청크의 문장을 우선한다 (1위 1.0, 2위 0.8, 3위 0.6 …)
+                overlap = round(sum(self.weight(f) for f in query & set(features(sentence))) * (1 - 0.2 * rank), 4)
                 candidate = (overlap, -rank, item.chunk.chunk_id, sentence)
                 if best is None or candidate[:2] > best[:2]:
                     best = candidate

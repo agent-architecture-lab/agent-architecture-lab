@@ -1,0 +1,7 @@
+{"review_id": "R-0501", "cohort": 5, "study_id": "5-05", "text": "매주 패턴 이론을 배우고 바로 구현하는 흐름이 좋았습니다. Reflection과 RAG를 직접 만들어 보니 구조가 이해됐어요. 다만 LangGraph 상태 관리는 처음에 많이 헷갈렸습니다.", "synthetic": true, "consent": true}
+{"review_id": "R-0502", "cohort": 5, "study_id": "5-05", "text": "코드 리뷰를 매주 주고받으면서 많이 배웠습니다. 혼자였으면 테스트를 이렇게 꼼꼼히 쓰지 않았을 것 같아요. Git 브랜치와 PR 사용법은 미리 익혀 두면 좋습니다.", "synthetic": true, "consent": true}
+{"review_id": "R-0503", "cohort": 5, "study_id": "5-05", "text": "커뮤니티 운영이라는 실제 문제를 다뤄서 동기부여가 됐습니다. 모듈이 서로 이어지는 구조라 한 주를 놓치면 따라가기 어려웠어요. 일정을 미리 확보하고 들어오는 것을 추천합니다.", "synthetic": true, "consent": true}
+{"review_id": "R-0504", "cohort": 5, "study_id": "5-05", "text": "에이전트 설계를 감이 아니라 수치로 판단하는 습관이 생겨 도움이 됐습니다. 발표 준비 기간이 생각보다 짧아서 시연 시나리오를 일찍 정해 두면 좋겠습니다.", "synthetic": true, "consent": true}
+{"review_id": "R-1501", "cohort": 5, "study_id": "5-15", "text": "SQL을 잘 몰랐는데 에이전트가 쿼리를 만드는 과정을 보면서 같이 배웠습니다. 데이터셋을 구하는 데 시간이 오래 걸려서 아쉬웠어요.", "synthetic": true, "consent": true}
+{"review_id": "R-1502", "cohort": 5, "study_id": "5-15", "text": "Text-to-SQL 결과를 검증하는 방법을 고민한 게 가장 도움이 됐습니다. 기본 SQL 문법은 미리 공부해 오면 좋습니다.", "synthetic": true, "consent": true}
+{"review_id": "R-1601", "cohort": 5, "study_id": "5-16", "text": "8주 안에 실제로 서비스를 출시해 본 경험이 좋았습니다. 아이디어를 너무 크게 잡아서 중간에 범위를 줄이느라 힘들었어요.", "synthetic": true, "consent": true}

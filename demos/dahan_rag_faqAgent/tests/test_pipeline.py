@@ -46,7 +46,7 @@ def test_answer_carries_source_ids_and_version(agent):
 
 
 def test_out_of_scope_question_is_not_answered(agent):
-    result = agent.answer("참가비는 얼마인가요?")
+    result = agent.answer("환불 규정이 어떻게 되나요?")
     assert result.status == "no_answer"
     assert result.draft is None  # 점수 하한에서 멈춰 생성기를 호출하지 않음
     assert result.citations == []
@@ -110,9 +110,32 @@ def test_simulation_uses_no_external_api(agent):
 
 def test_evaluation_report_shape_and_floor(agent):
     report = evaluate(agent, json.loads(EVAL_PATH.read_text(encoding="utf-8")))
-    assert report["cases"] == 18
-    # 어휘 baseline의 현재 수치를 회귀 방지선으로 둔다. 실패 사례(Q11, Q15)는 README에 기록.
-    assert report["status_accuracy"] >= 0.88
+    assert report["cases"] == 31
+    # 어휘 baseline의 현재 수치를 회귀 방지선으로 둔다. 실패 사례는 README에 기록.
+    assert report["status_accuracy"] >= 0.83
     assert report["hit_at_k"] == 1.0
     blocked = [r for r in report["rows"] if r["expected_status"] == "blocked"]
     assert all(r["status_ok"] for r in blocked)
+
+
+def test_unknown_cohort_is_refused_without_retrieval(agent):
+    result = agent.answer("6기 모집은 언제 하나요?")
+    assert result.status == "no_answer" and result.retrieved == []
+    assert "6기" in result.message
+
+
+def test_cohort_question_only_searches_that_cohort(agent):
+    result = agent.answer("3기는 어떤 활동을 했나요?")
+    assert result.status == "answered"
+    assert all(3 in r.chunk.cohorts for r in result.retrieved)
+    assert "Women Techmakers London" in result.message
+
+
+def test_answer_footer_names_document(agent):
+    result = agent.answer("1·2기 활동 사례집이 있나요?")
+    assert "[its-007]" in result.message and "기수별 활동 안내" in result.message
+
+
+def test_answer_footer_includes_source_url(agent):
+    result = agent.answer("Codex 크레딧 지원이 있나요?")
+    assert result.status == "answered" and "wtech.or.kr" in result.message

@@ -3,8 +3,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-Role = Literal["applicant", "member", "operator"]
-AgentName = Literal["faq", "screening", "retro"]
+Role = Literal["applicant", "member"]  # 참여 예정자(지원 전) / 참여자(스터디원)
+AgentName = Literal["faq", "recommend", "selfcheck", "retro", "review_write", "review_summary"]
 KptField = Literal["keep", "problem", "try"]
 
 
@@ -12,7 +12,7 @@ KptField = Literal["keep", "problem", "try"]
 
 class RetroEntry(BaseModel):
     member_id: str
-    week: int = Field(ge=1, le=8)
+    week: int | None = Field(None, ge=1, le=8)  # 채팅에서 주차를 안 쓰면 None
     keep: str = ""
     problem: str = ""
     try_: str = Field("", alias="try")
@@ -55,8 +55,11 @@ class AssistantRequest(BaseModel):
     request_id: str = "manual"
     role: Role
     text: str
-    application_id: str | None = None  # 비어 있으면 본문에서 A000 형식 ID를 찾는다
-    retro: RetroEntry | None = None
+    retro: RetroEntry | None = None              # 메시지의 Keep:/Problem:/Try: 줄
+    application_draft: str | None = None         # "지원서 봐줘" 아래 붙여 넣은 초안
+    review_text: str | None = None               # "후기:" 뒤 본문
+    review_consent: bool = False                 # 다음 기수 공개 동의 (화면의 스위치)
+    original_text: str | None = None             # 구조화하기 전 메시지 원문
 
 
 class AgentOutput(BaseModel):
@@ -71,7 +74,7 @@ class AgentOutput(BaseModel):
 
 class SupervisorDecision(BaseModel):
     reason: str  # 이유를 먼저 쓰게 해 선택을 일관되게 한다
-    next: Literal["faq", "screening", "retro", "FINISH"]
+    next: Literal["faq", "recommend", "selfcheck", "retro", "review_write", "review_summary", "FINISH"]
 
 
 class TraceStep(BaseModel):

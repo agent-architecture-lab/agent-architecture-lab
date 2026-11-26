@@ -36,8 +36,10 @@ def first_sentence(text: str) -> str:
     return parts[0] if parts else ""
 
 
-def next_week_plan(week: int) -> tuple[str, str] | None:
+def next_week_plan(week: int | None) -> tuple[str, str] | None:
     """모집 공고의 주차별 계획에서 다음 주 줄을 찾는다. 8주차 다음은 성과공유회."""
+    if week is None:
+        return None
     prefix = f"{week + 1}주차(" if week < 8 else "성과공유회("
     for chunk in load_source(SOURCE_PATH).chunks:
         for line in chunk.text.splitlines():
@@ -79,7 +81,7 @@ def validate_feedback(feedback: RetroFeedback, entry: RetroEntry) -> list[RetroI
 
 
 def compose_message(entry: RetroEntry, feedback: RetroFeedback) -> str:
-    lines = [f"{entry.week}주차 회고 피드백"]
+    lines = [f"{entry.week}주차 회고 피드백" if entry.week else "회고 피드백"]
     for item in feedback.items:
         lines.append(f"- {LABEL[item.kind]}: {item.text.strip()}")
     if feedback.question.strip():

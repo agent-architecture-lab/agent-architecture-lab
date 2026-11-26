@@ -6,11 +6,12 @@ from __future__ import annotations
 
 from time import perf_counter
 
+from .chunking import question_cohort
 from .retriever import FaqIndex
 from .schemas import FaqResult
 from .validation import check_question, validate_draft
 
-NO_ANSWER_MESSAGE = "모집 공고에서 확인할 수 없는 내용입니다. 운영진에게 직접 문의해 주세요."
+NO_ANSWER_MESSAGE = "지식 베이스에서 확인할 수 없는 내용입니다. 운영진에게 직접 문의해 주세요."
 REJECTED_MESSAGE = "답변의 근거를 공고에서 확인하지 못해 답변을 보류했습니다. 운영진에게 직접 문의해 주세요."
 
 
@@ -36,7 +37,11 @@ class FaqAgent:
         if blocked:
             return done(status="blocked", message=blocked)
 
-        retrieved = self.index.search(question, self.top_k)
+        cohort = question_cohort(question)
+        if cohort is not None and not self.index.has_cohort(cohort):
+            return done(status="no_answer", message=f"{cohort}기 자료는 아직 지식 베이스에 없습니다. 운영진에게 직접 문의해 주세요.",
+                        issues=[f"cohort_not_in_kb: {cohort}기"])
+        retrieved = self.index.search(question, self.top_k, cohort)
         if not retrieved or retrieved[0].score < self.index.embedder.min_score:
             return done(status="no_answer", message=NO_ANSWER_MESSAGE, retrieved=retrieved,
                         issues=[f"low_retrieval_score: 최고 점수 {retrieved[0].score if retrieved else 0} "
@@ -51,9 +56,10 @@ class FaqAgent:
             return done(status="rejected", message=REJECTED_MESSAGE, retrieved=retrieved,
                         draft=draft, issues=issues)
 
-        titles = {r.chunk.chunk_id: r.chunk.title for r in retrieved}
+        chunks = {r.chunk.chunk_id: r.chunk for r in retrieved}
         cited = list(dict.fromkeys(c.chunk_id for c in draft.citations))
-        footer = "\n".join(f"- [{cid}] {titles[cid]}" for cid in cited)
-        message = f"{draft.answer.strip()}\n\n출처 (공고 {version}):\n{footer}"
+        footer = "\n".join(f"- [{cid}] {chunks[cid].title} · {chunks[cid].doc_title} ({chunks[cid].doc_version})"
+                           + (f" {chunks[cid].url}" if chunks[cid].url else "") for cid in cited)
+        message = f"{draft.answer.strip()}\n\n출처:\n{footer}"
         return done(status="answered", message=message, citations=draft.citations,
                     retrieved=retrieved, draft=draft)

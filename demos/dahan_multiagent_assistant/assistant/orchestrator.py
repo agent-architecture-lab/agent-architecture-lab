@@ -6,11 +6,13 @@ from __future__ import annotations
 
 from time import perf_counter
 
-from .routing import guard, router_plan, with_application_id
+from .chat import prepare
+from .routing import guard, router_plan
 from .schemas import AgentOutput, AssistantRequest, AssistantResult, TraceStep
 
 MAX_STEPS = 4  # Supervisor가 다음 에이전트를 고르는 최대 횟수 (FINISH 포함)
-HEADERS = {"faq": "📌 FAQ", "screening": "📝 지원서 평가 (운영진용)", "retro": "🔁 회고 피드백"}
+HEADERS = {"faq": "📌 FAQ", "recommend": "🧭 스터디 추천", "selfcheck": "📝 지원서 셀프 체크",
+           "retro": "🔁 회고 피드백", "review_write": "✍️ 후기 남기기", "review_summary": "💬 이전 기수 후기"}
 NO_ROUTE_MESSAGE = "요청을 처리할 에이전트를 찾지 못했습니다. 질문을 조금 더 구체적으로 적어 주시거나 운영진에게 문의해 주세요."
 
 
@@ -21,9 +23,10 @@ def compose(outputs: list[AgentOutput]) -> str:
 
 
 class Orchestrator:
-    def __init__(self, specialists: dict, supervisor=None):
+    def __init__(self, specialists: dict, supervisor=None, trace_sink=None):
         self.specialists = specialists
         self.supervisor = supervisor
+        self.trace_sink = trace_sink  # (request, result) -> None. 예: tracing.JsonlTraceSink
 
     def _execute(self, agent: str, request: AssistantRequest) -> AgentOutput:
         try:
@@ -35,7 +38,7 @@ class Orchestrator:
         if strategy == "supervisor" and self.supervisor is None:
             raise ValueError("Supervisor가 설정되지 않았습니다.")
         begin = perf_counter()
-        request = with_application_id(request)
+        request = prepare(request)
         sup_calls = self.supervisor.calls if self.supervisor else 0
         outputs: list[AgentOutput] = []
         trace: list[TraceStep] = []
@@ -74,10 +77,16 @@ class Orchestrator:
                                        verdict="rejected", guard="max_steps"))
 
         supervisor_calls = (self.supervisor.calls - sup_calls) if self.supervisor else 0
-        return AssistantResult(
+        result = AssistantResult(
             request_id=request.request_id, strategy=strategy,
             route=[o.agent for o in outputs], outputs=outputs, trace=trace,
             guard_violations=violations, message=compose(outputs),
             api_calls=sum(o.api_calls for o in outputs) + supervisor_calls,
             elapsed_seconds=round(perf_counter() - begin, 3),
         )
+        if self.trace_sink is not None:
+            try:
+                self.trace_sink(request, result)
+            except OSError:
+                pass  # 로그 기록 실패가 사용자 응답을 막지 않게 한다
+        return result

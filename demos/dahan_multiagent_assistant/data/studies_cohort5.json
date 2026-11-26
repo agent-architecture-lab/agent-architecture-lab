@@ -1,0 +1,296 @@
+{
+ "cohort": 5,
+ "source": "우먼잇츠 공지사항 「OpenAI × 잇츠 스터디」 5기 크루원 모집 (2026.09.01) — 개설 스터디 20팀 목록",
+ "source_url": "https://wtech.or.kr/sub/board/notice/222",
+ "recruitment_closed": "2026-09-17",
+ "topics_note": "topics는 공지의 분야 태그와 제목만 보고 분류한 값입니다. 스터디별 상세 페이지를 받으면 다시 분류해야 합니다.",
+ "studies": [
+  {
+   "study_id": "5-01",
+   "number": 1,
+   "category": "AI/에이전트",
+   "title": "논문 어시: Codex로 만드는 연구 보조 에이전트",
+   "topics": [
+    "research"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-02",
+   "number": 2,
+   "category": "AI에이전트",
+   "title": "XFolio(엑스폴리오): 시장을 읽고 X에 전하는 AI 에이전트",
+   "topics": [
+    "social_media",
+    "finance"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-03",
+   "number": 3,
+   "category": "AI/개발",
+   "title": "Codex Agent Lab: 실무형 AI 에이전트 만들기",
+   "topics": [
+    "general_dev"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-04",
+   "number": 4,
+   "category": "모바일/AI 온디바이스",
+   "title": "기억 캡슐",
+   "topics": [
+    "mobile"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-05",
+   "number": 5,
+   "category": "학습/설계",
+   "title": "에이전트 아키텍처 랩 — 우리 손으로 만드는 커뮤니티 운영 에이전트",
+   "topics": [
+    "architecture",
+    "community"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-06",
+   "number": 6,
+   "category": "금융/AI_AGENT",
+   "title": "머핀랩(Muffin Lab): Money & Finance Intelligence Agent Lab",
+   "topics": [
+    "finance"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-07",
+   "number": 7,
+   "category": "사고 확장/지식 내재화",
+   "title": "AI Code Decode Agent: AI가 생성한 코드를 내 지식으로 만들기",
+   "topics": [
+    "learning"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-08",
+   "number": 8,
+   "category": "AI/개발",
+   "title": "Codex 기반 AI 성능 개선 스터디",
+   "topics": [
+    "evaluation",
+    "general_dev"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-09",
+   "number": 9,
+   "category": "이력서/취업",
+   "title": "매칭에서 첨삭까지: Codex로 만드는 커리어 에이전트",
+   "topics": [
+    "career"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-10",
+   "number": 10,
+   "category": "AI에이전트/DevOps",
+   "title": "Hermes × Codex 기반 AI 협업 워크플로 설계",
+   "topics": [
+    "devtools"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-11",
+   "number": 11,
+   "category": "AI Agent/Benchmarking",
+   "title": "잇츠 코덱스(It's Codex): Codex Coding Agent Evaluation Lab",
+   "topics": [
+    "evaluation"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-12",
+   "number": 12,
+   "category": "AI/개발",
+   "title": "잇다: 서울우먼잇츠 AI 에이전트 프로젝트",
+   "topics": [
+    "community",
+    "general_dev"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-13",
+   "number": 13,
+   "category": "사이드프로젝트",
+   "title": "1인 개발 크루 홀로선(SoloShip): Codex와 함께 8주간 1인 작업 환경 구축하고 프로젝트 출시하기",
+   "topics": [
+    "side_project",
+    "devtools"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-14",
+   "number": 14,
+   "category": "AI에이전트",
+   "title": "CODE-A: PR 리뷰 & 모니터링 에이전트 'CO-DAY'",
+   "topics": [
+    "devtools"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-15",
+   "number": 15,
+   "category": "데이터분석/AI",
+   "title": "Text-to-SQL 분석 에이전트 만들기",
+   "topics": [
+    "data"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-16",
+   "number": 16,
+   "category": "사이드프로젝트",
+   "title": "SideDex: 지금부터 Codex로 나만의 사이드 프로젝트 출시하기",
+   "topics": [
+    "side_project"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-17",
+   "number": 17,
+   "category": "AI/개발",
+   "title": "실전 홍익 AI 에이전트 프로젝트: 아이디어에서 배포까지",
+   "topics": [
+    "general_dev",
+    "side_project"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-18",
+   "number": 18,
+   "category": "엔지니어링/AI에이전트",
+   "title": "문제에서 에이전트까지: 하네스 엔지니어링 기반 개발 에이전트 구축",
+   "topics": [
+    "devtools",
+    "architecture"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-19",
+   "number": 19,
+   "category": "AI/개발",
+   "title": "OpenAI API와 Codex로 만드는 나만의 AI Copilot",
+   "topics": [
+    "general_dev"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  },
+  {
+   "study_id": "5-20",
+   "number": 20,
+   "category": "음성/UX",
+   "title": "Voice UX Lab (Voice-First AI Agent 구축)",
+   "topics": [
+    "voice"
+   ],
+   "schedule": null,
+   "format": null,
+   "target": null,
+   "capacity": null,
+   "detail_url": null
+  }
+ ]
+}
